@@ -1,0 +1,28 @@
+sequence_no,transaction_id,sender_name,receiver_name,amount,date,time,transaction_app,label
+1,TNX1001,Alice,Bob,500,2025-07-01,10:30:00,GooglePay,not fraud
+2,TNX1002,Charlie,Eve,5000,2025-07-01,11:00:00,PhonePe,fraud
+3,TNX1003,Dave,Alice,1000,2025-07-02,12:30:00,Paytm,not fraud
+4,TNX1004,Eve,Charlie,8000,2025-07-02,13:45:00,BHIM,fraud
+5,TNX1005,Alice,Dave,700,2025-07-03,14:10:00,GooglePay,not fraud
+6,TNX1006,Frank,Alice,4500,2025-07-03,09:50:00,PhonePe,fraud
+7,TNX1007,Bob,Charlie,900,2025-07-04,08:30:00,Paytm,not fraud
+8,TNX1008,Eve,Frank,3000,2025-07-04,12:00:00,BHIM,fraud
+9,TNX1009,Dave,Bob,1500,2025-07-05,15:20:00,GooglePay,not fraud
+10,TNX1010,Charlie,Dave,6500,2025-07-05,16:00:00,PhonePe,fraud
+11,TNX1011,Alice,Eve,400,2025-07-06,10:15:00,Paytm,not fraud
+12,TNX1012,Bob,Frank,7200,2025-07-06,17:30:00,BHIM,fraud
+13,TNX1013,Eve,Bob,1100,2025-07-07,11:45:00,GooglePay,not fraud
+14,TNX1014,Dave,Charlie,5600,2025-07-07,18:10:00,PhonePe,fraud
+15,TNX1015,Alice,Frank,600,2025-07-08,13:25:00,Paytm,not fraud
+16,TNX1016,Frank,Bob,8700,2025-07-08,19:00:00,BHIM,fraud
+17,TNX1017,Bob,Alice,800,2025-07-09,09:05:00,GooglePay,not fraud
+18,TNX1018,Charlie,Frank,9200,2025-07-09,20:40:00,PhonePe,fraud
+19,TNX1019,Dave,Eve,1100,2025-07-10,14:20:00,Paytm,not fraud
+20,TNX1020,Eve,Alice,10000,2025-07-10,21:10:00,BHIM,fraud
+21,TNX1021,Alice,Charlie,750,2025-07-11,11:00:00,GooglePay,not fraud
+22,TNX1022,Frank,Dave,9400,2025-07-11,22:20:00,PhonePe,fraud
+23,TNX1023,Bob,Eve,1300,2025-07-12,12:10:00,Paytm,not fraud
+24,TNX1024,Dave,Frank,8800,2025-07-12,23:00:00,BHIM,fraud
+25,TNX1025,Eve,Charlie,600,2025-07-13,09:30:00,GooglePay,not fraud
+26,TNX1026,sayali,aradhya,500,07-07-2025,23:00:00,phonepe,fraud
+27,TNX1027,aradhya,sayali,9400,2025-07-11,22:20:00,PhonePe,fraud

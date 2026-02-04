@@ -1,0 +1,21 @@
+ sequence_no,transaction_id,card_number,card_holder_name,merchant_category,transaction_amount,transaction_date,transaction_time,transaction_type,location,channel,previous_fraud_count,is_international,label
+1,TXN1001,XXXX-XXXX-XXXX-7311,Norma Fisher,Travel,298.37,2025-06-03,19:14:57,ATM Withdrawal,Hyderabad,Mobile App,3,1,not fraud
+2,TXN1002,XXXX-XXXX-XXXX-4578,Dr. Ronald Faulkner,Grocery,1481.01,2025-06-12,00:56:31,Online,Pune,POS Terminal,1,1,fraud
+3,TXN1003,XXXX-XXXX-XXXX-2208,Colleen Taylor,Pharmacy,1717.97,2025-05-22,14:46:20,ATM Withdrawal,Mumbai,Mobile App,2,0,not fraud
+4,TXN1004,XXXX-XXXX-XXXX-8815,Robert Archer,Fuel,1376.41,2025-06-29,03:37:52,ATM Withdrawal,Mumbai,POS Terminal,3,0,not fraud
+5,TXN1005,XXXX-XXXX-XXXX-6458,Stephanie Collins,Pharmacy,1693.50,2025-05-16,12:18:29,Online,Delhi,Web,1,0,not fraud
+6,TXN1006,XXXX-XXXX-XXXX-8339,Justin Gomez,Electronics,4966.79,2025-06-08,16:16:28,ATM Withdrawal,Hyderabad,Mobile App,2,0,not fraud
+7,TXN1007,XXXX-XXXX-XXXX-9852,Christine Tran,Fuel,2781.43,2025-06-20,07:33:33,POS,Hyderabad,POS Terminal,3,1,not fraud
+8,TXN1008,XXXX-XXXX-XXXX-5756,Robert Dunn,Grocery,4125.19,2025-05-10,06:50:06,Online,Pune,Mobile App,3,0,fraud
+9,TXN1009,XXXX-XXXX-XXXX-3133,Jennifer Summers,Grocery,4624.57,2025-05-09,18:49:50,Online,Pune,Mobile App,2,0,not fraud
+10,TXN1010,XXXX-XXXX-XXXX-7871,Sean Sanchez MD,Clothing,2307.76,2025-05-15,23:57:26,ATM Withdrawal,Bangalore,Mobile App,0,1,not fraud
+11,TXN1011,XXXX-XXXX-XXXX-6493,Connie Pratt,Grocery,1290.87,2025-05-22,03:13:02,ATM Withdrawal,Bangalore,POS Terminal,1,1,not fraud
+12,TXN1012,XXXX-XXXX-XXXX-6448,Anna Kaiser,Electronics,592.98,2025-06-27,06:56:01,Online,Delhi,POS Terminal,0,0,fraud
+13,TXN1013,XXXX-XXXX-XXXX-4088,Juan Mann,Fuel,686.51,2025-07-01,13:24:45,Online,Bangalore,Web,0,0,not fraud
+14,TXN1014,XXXX-XXXX-XXXX-4030,Kimberly Maynard,Electronics,2448.24,2025-07-06,11:28:19,ATM Withdrawal,Mumbai,Web,3,0,not fraud
+15,TXN1015,XXXX-XXXX-XXXX-2146,Jill Carlson,Electronics,3269.94,2025-06-15,05:48:46,POS,Hyderabad,Web,3,0,not fraud
+16,TXN1016,XXXX-XXXX-XXXX-7410,Donna Lopez,Clothing,1856.92,2025-05-27,12:48:46,ATM Withdrawal,Hyderabad,Web,1,0,not fraud
+17,TXN1017,XXXX-XXXX-XXXX-3592,Mary Alvarez,Grocery,1777.33,2025-05-17,18:36:45,POS,Mumbai,Mobile App,1,0,not fraud
+18,TXN1018,XXXX-XXXX-XXXX-7715,Sherri Mclean,Fuel,4595.80,2025-05-16,18:17:56,ATM Withdrawal,Bangalore,POS Terminal,2,0,not fraud
+19,TXN1019,XXXX-XXXX-XXXX-1203,Kimberly Myers,Pharmacy,487.46,2025-06-28,22:09:34,ATM Withdrawal,Mumbai,Mobile App,1,0,not fraud
+20,TXN1020,XXXX-XXXX-XXXX-8894,Cynthia Lewis,Fuel,1510.60,2025-07-05,19:42:24,POS,Pune,POS Terminal,1,1,not fraud

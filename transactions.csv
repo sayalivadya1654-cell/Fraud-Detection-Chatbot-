@@ -1,0 +1,4 @@
+txn_id,sender,receiver,amount
+TXN123,sayali@upi,shop@upi,1200
+TXN456,rahul@upi,amit@upi,750
+TXN789,megha@upi,store@upi,500
