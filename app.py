@@ -8,11 +8,26 @@ import time
 import random
 from datetime import datetime
 import re
+import joblib
+import numpy as np
+import pandas as pd
+from sklearn.ensemble import RandomForestClassifier
+# ================== XAI SETUP ==================
+import shap  # if not already imported
 
-# ===== NEW: DB imports =====
+# Global SHAP variables
+shap_explainers = {}    # will store explainer per category
+shap_values_dict = {}   # will store SHAP values per category
+# =================================================
+
+# ================== XAI IMPORTS ==================
+from XAI.SHAP.shap_utils import shap_global_explain
+# =================================================
+
+# ===== DB imports =====
 from fraud_detection import init_db, save_user, save_transaction
 
-# ===== NEW: Email alert import =====
+# ===== Email alert import =====
 from send_email import send_alert
 
 # ---------------- STREAMLIT PAGE CONFIG ----------------
@@ -31,8 +46,6 @@ input, select, textarea { background-color: #ffffff !important; border: 1px soli
 .danger-box { background-color: #FFD6D6; padding: 1rem; border-radius: 10px; font-weight: 600; border-left: 6px solid #C0392B; color: #7A1A1A; }
 .example-questions { background: linear-gradient(135deg, #EAF2F8, #D6EAF8); padding: 0.8rem; border-radius: 8px; font-size: 0.95rem; font-weight: 500; color: #222222; margin-bottom: 5px; box-shadow: 0px 2px 5px rgba(0,0,0,0.1); transition: all 0.3s ease; }
 .example-questions:hover { background: linear-gradient(135deg, #D6EAF8, #AED6F1); transform: scale(1.02); }
-
-/* Language selector style */
 .language-selectbox label { color: white !important; font-weight: 600 !important; }
 .language-selectbox div[data-baseweb="select"] > div {
     background-color: black !important;
@@ -78,25 +91,215 @@ def speak(text, lang_code="en"):
         except Exception as e:
             print("Error in gTTS:", e)
 
-# ---------------- FRAUD DETECTION LOGIC ----------------
-def chatbot_reply(user_query, inputs, category):
-    if category == "upi":
-        if ("fraud" in inputs.get("upi_id", "").lower() or
-            "fraud" in inputs.get("sender", "").lower() or
-            "fraud" in inputs.get("receiver", "").lower() or
-            inputs.get("amount", 0) > 50000):
-            return "⚠ Fraud Detected in UPI Transaction.", False
-        return "✅ UPI Transaction is Safe.", True
-    elif category == "credit card":
-        if inputs.get("card_number", "").startswith("0000") or len(inputs.get("cvv", "")) != 3:
-            return "⚠ Credit Card Fraud Detected.", False
-        return "✅ Credit Card Transaction is Safe.", True
-    elif category == "url":
-        if any(s in inputs.get("url", "").lower() for s in ["bit.ly", "scam", "fraud", "phish"]):
-            return "⚠ Fraudulent URL Detected.", False
-        return "✅ URL is Safe to Visit.", True
-    return "❓ Unable to verify transaction.", None
+# ---------------- NEW: ML MODEL INTEGRATION ----------------
+# --- Load models ---
+MODELS_FOLDER = r"D:\Projects\all_fraud_detection\models"
 
+models = {}
+
+model_files = {
+    "upi": "upi_model.pkl",
+    "credit": "credit_model.pkl",
+    "url": "url_model.pkl"
+}
+
+for category, filename in model_files.items():
+    try:
+        filepath = f"{MODELS_FOLDER}\\{filename}"
+        models[category] = joblib.load(filepath)
+        print(f"✅ Loaded {category} model")
+
+    except Exception as e:
+        print(f"⚠ Failed to load {filename}: {e}")
+
+# --- Compute SHAP AFTER all models loaded ---
+shap_explainers = {}
+shap_values_dict = {}
+
+dataset_paths = {
+    "upi": r"D:\Projects\all_fraud_detection\notebook\upi_combined_dataset.csv",
+    "url": r"D:\Projects\all_fraud_detection\notebook\url_fraud_dataset.csv",
+    "credit": r"D:\Projects\all_fraud_detection\notebook\credit_combined_dataset.csv"
+}
+
+for category_name, model_pipeline in models.items():
+
+    if category_name == "credit":
+        continue
+    try:
+        df_train = pd.read_csv(dataset_paths[category_name])
+        df_train.columns = df_train.columns.str.strip().str.lower()
+
+        # Feature engineering
+        if category_name == "upi":
+
+            df_train['amount'] = df_train['amount'].fillna(0).astype(float) if 'amount' in df_train else 0
+            df_train['sender_len'] = df_train['sender'].fillna('').apply(len) if 'sender' in df_train else 0
+            df_train['receiver_len'] = df_train['receiver'].fillna('').apply(len) if 'receiver' in df_train else 0
+
+            df_train['date_numeric'] = pd.to_datetime(df_train['date'], errors='coerce').dt.day.fillna(0).astype(int) if 'date' in df_train else 0
+
+            df_train['time_numeric'] = df_train['time'].fillna('00:00').apply(
+                lambda x: int(x.split(':')[0])*60 + int(x.split(':')[1]) if ':' in x else 0
+            ) if 'time' in df_train else 0
+
+            feature_cols = ['amount','sender_len','receiver_len','date_numeric','time_numeric']
+
+        elif category_name == "credit":
+           df_train['card_length'] = df_train['card_number'].fillna('').apply(len) if 'card_number' in df_train else 0
+           df_train['cvv'] = df_train['cvv'].fillna(0).astype(int) if 'cvv' in df_train else 0     
+
+           feature_cols = ['card_length','cvv']
+
+        elif category_name == "url":
+
+            df_train['url_length'] = df_train['url'].fillna('').apply(len)
+            df_train['dots_count'] = df_train['url'].fillna('').apply(lambda x: x.count('.'))
+            df_train['has_https'] = df_train['url'].fillna('').apply(lambda x: int('https' in x))
+
+            df_train['is_shortened'] = 0
+            df_train['entropy_score'] = 0
+            df_train['domain_age_months'] = 0
+            df_train['blacklist_match'] = 0
+            df_train['sender_known'] = 0
+            df_train['source_channel'] = 0
+            df_train['clicked'] = 0
+
+            feature_cols = [
+                "url_length",
+                "dots_count",
+                "has_https",
+                "is_shortened",
+                "entropy_score",
+                "domain_age_months",
+                "blacklist_match",
+                "sender_known",
+                "source_channel",
+                "clicked"
+            ]
+        # Preprocessing
+        preprocessor = list(model_pipeline.named_steps.values())[0]
+        X_train = preprocessor.transform(df_train[feature_cols])
+
+        if hasattr(X_train, "toarray"):
+            X_train = X_train.toarray()
+
+        X_train = X_train.astype(float)
+
+        # Classifier
+        classifier = list(model_pipeline.named_steps.values())[-1]
+
+        explainer = shap.Explainer(classifier, X_train)
+
+        shap_explainers[category_name] = explainer
+        shap_values_dict[category_name] = explainer(X_train)
+
+        print(f"✅ SHAP computed for {category_name}")
+
+    except Exception as e:
+        print(f"⚠ Failed to compute SHAP for {category_name}: {e}")
+                                
+def extract_features(inputs, category):
+
+    if category == "upi":
+        amount = float(inputs.get("amount", 0))
+        sender_len = len(inputs.get("sender", "")) if inputs.get("sender") else 0
+        receiver_len = len(inputs.get("receiver", "")) if inputs.get("receiver") else 0
+        
+        date_input = inputs.get("date")
+        date_numeric = int(date_input.strftime("%d")) if date_input else 0
+        
+        time_input = inputs.get("time", "00:00")
+        h, m = map(int, time_input.split(":")) if ":" in time_input else (0, 0)
+        time_numeric = h*60 + m
+        
+        features = [amount, sender_len, receiver_len, date_numeric, time_numeric]
+        feature_names = ["amount","sender_len","receiver_len","date_numeric","time_numeric"]
+        return features, feature_names
+
+    elif category == "credit":
+        card_num = inputs.get("card_number", "")
+        cvv = inputs.get("cvv", "")
+        return [len(card_num), int(cvv) if cvv.isdigit() else 0], ["card_length","cvv"]
+
+    elif category == "url":
+
+        url = inputs.get("url", "")
+
+        features = [
+            len(url),
+            url.count("."),
+            int("https" in url),
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ]
+
+        feature_names = [
+            "url_length",
+            "dots_count",
+            "has_https",
+            "is_shortened",
+            "entropy_score",
+            "domain_age_months",
+            "blacklist_match",
+            "sender_known",
+            "source_channel",
+            "clicked"
+        ]
+
+        return features, feature_names
+
+    return [], []
+def chatbot_reply(user_query, inputs, category):
+
+    # 🔹 Rule-based override for high amount
+    if category == "upi" and inputs.get("amount", 0) > 50000:
+        return "🚨 Amount too high! Potential fraud.", False, 95.0
+
+    model = models.get(category)
+
+    if model:
+        try:
+            features, _ = extract_features(inputs, category)
+
+            # 🔥 IMPORTANT FIX: Create DataFrame with correct column names
+            feature_names = model.named_steps['preprocessor'].transformers_[0][2]
+            input_df = pd.DataFrame([features], columns=feature_names)
+
+            # 🔹 Prediction
+            pred = model.predict(input_df)[0] 
+
+            # 🔹 Risk Score using probability
+            if hasattr(model, "predict_proba"):
+                prob = model.predict_proba(input_df)[0][1]
+                risk_score = round(float(prob) * 100, 2)
+            else:
+                risk_score = 90.0 if pred == 1 else 10.0
+
+            if pred == 1:
+                return "⚠ Fraud Detected by Machine Learning Model.", False, risk_score
+            else:
+                return "✅ Transaction Safe according to Machine Learning Model.", True, risk_score
+
+        except Exception as e:
+            print(f"ML model error for {category}: {e}")
+            return "❓ ML Error Occurred.", None, 50.0
+
+    # 🔹 Fallback logic (no model found)
+    if category == "upi":
+        return "✅ UPI Transaction is Safe.", True, 10.0
+    elif category == "credit":
+        return "✅ Credit Card Transaction is Safe.", True, 10.0
+    elif category == "url":
+        return "✅ URL is Safe to Visit.", True, 10.0
+
+    return "❓ Unable to verify transaction.", None, 50.0
+# ---------------- COMMON FUNCTIONS ----------------
 def store_on_blockchain(txn_id_text, status):
     try:
         fake_tx_hash = "0x" + "".join(random.choices("0123456789abcdef", k=64))
@@ -105,7 +308,6 @@ def store_on_blockchain(txn_id_text, status):
     except Exception as e:
         return None, None, f"Blockchain Error: {e}"
 
-# ---------------- VALIDATION ----------------
 def is_valid_name(name):
     return bool(re.match(r'^[A-Za-z ]+$', name.strip()))
 
@@ -149,9 +351,10 @@ def login_page():
 
 # ---------------- CHATBOT INTERFACE ----------------
 def chatbot_interface():
+    global shap_explainers,shap_values_dict
     lang_code = st.session_state.lang_code
     st.title("💬 " + translate("Multilingual Fraud Detection Chatbot", lang_code))
-
+    
     if st.session_state.step == 0:
         speak(translate(f"Welcome {st.session_state.get('user_name', '')}!", lang_code), lang_code)
         time.sleep(0.5)
@@ -159,7 +362,7 @@ def chatbot_interface():
         st.session_state.step = 1
 
     category = st.radio(translate("Choose Transaction Type", lang_code),
-                        ["upi", "credit card", "url"], horizontal=True, key="category")
+                    ["upi", "credit", "url"], horizontal=True, key="category")
     if category and st.session_state.step == 1:
         speak(translate("Now, please enter all transaction details in the sidebar.", lang_code), lang_code)
         st.session_state.step = 2
@@ -178,7 +381,7 @@ def chatbot_interface():
             inputs["amount"] = st.number_input(translate("Amount", lang_code), min_value=1.0)
             inputs["date"] = st.date_input(translate("Date", lang_code))
             inputs["time"] = st.text_input(translate("Time (HH:MM)", lang_code))
-        elif category == "credit card":
+        elif category == "credit":
             inputs["card_number"] = st.text_input(translate("Card Number", lang_code))
             inputs["cvv"] = st.text_input(translate("CVV", lang_code))
         elif category == "url":
@@ -192,7 +395,7 @@ def chatbot_interface():
                         inputs.get("upi_id"), inputs.get("sender"), inputs.get("receiver"),
                         inputs.get("amount") > 0, inputs.get("date"), inputs.get("time"),
                         is_valid_name(inputs.get("sender", "")), is_valid_name(inputs.get("receiver", ""))])
-                elif category == "credit card":
+                elif category == "credit":
                     details_filled = all([inputs.get("card_number"), inputs.get("cvv")])
                 elif category == "url":
                     details_filled = bool(inputs.get("url"))
@@ -216,7 +419,7 @@ def chatbot_interface():
                     "Can I trust this sender in UPI?", "Detect fraud in this UPI transfer.", "Does this receiver look suspicious?",
                     "Verify this UPI amount."
                 ]
-            elif category == "credit card":
+            elif category == "credit":
                 example_list = [
                     "Check this credit card transaction.", "Is this card number safe?", "Does this CVV look valid?",
                     "Is this a fraudulent card transaction?", "Verify this credit card payment.", "Is this card compromised?",
@@ -251,10 +454,18 @@ def chatbot_interface():
                 else:
                     with st.spinner("🤖 " + translate("Bot is typing...", lang_code)):
                         time.sleep(1.5)
-                    response, is_safe = chatbot_reply(st.session_state.query, st.session_state.stored_inputs, category)
+
+                                        # ---- ML Prediction ----
+                    response, is_safe, risk_score = chatbot_reply(
+                        st.session_state.query,
+                        st.session_state.stored_inputs,
+                        category
+                    )
+
                     translated = translate(response, lang_code)
                     speak(translated, lang_code)
 
+                    # Show Safe / Fraud Result
                     if is_safe:
                         st.markdown(f"<div class='safe-box'>{translated}</div>", unsafe_allow_html=True)
                     elif is_safe is False:
@@ -262,7 +473,14 @@ def chatbot_interface():
                     else:
                         st.info(translated)
 
+                    # 🔢 Risk Score directly below result
+                    st.markdown(f"""
+                    <div style='font-size:20px; font-weight:600; margin-top:10px;'>
+                    🔢 Risk Score: {risk_score}%
+</div>
+""", unsafe_allow_html=True)
                     status_str = "Safe" if is_safe is True else ("Fraud" if is_safe is False else "Unknown")
+                    status_str = f"{status_str} - Risk Score: {risk_score}%"
                     tx_hash, tx_time, tx_status = store_on_blockchain(st.session_state.query, status_str)
                     if tx_hash:
                         txn_html = (
@@ -277,7 +495,7 @@ def chatbot_interface():
                         )
                         st.markdown(txn_html, unsafe_allow_html=True)
 
-                    # ===== Persist transaction in DB =====
+                    # ---- Persist transaction in DB ----
                     try:
                         if "user_id" in st.session_state:
                             si = st.session_state.stored_inputs
@@ -295,17 +513,19 @@ def chatbot_interface():
                                 amount=float(si.get("amount",0)) if category=="upi" else None,
                                 txn_date=str(si.get("date")) if category=="upi" else None,
                                 txn_time=si.get("time") if category=="upi" else None,
-                                card_number=si.get("card_number") if category=="credit card" else None,
+                                card_number=si.get("card_number") if category=="credit" else None,
                                 url=si.get("url") if category=="url" else None
                             )
                     except Exception as e:
                         st.error(f"Failed to store transaction: {e}")
 
-                    # ===== Send email alert with full details =====
+                    # ---- Email Alert ----
                     try:
                         receiver_email = st.session_state.get("user_email", None)
+
                         if receiver_email:
                             email_status = "fraud" if is_safe is False else ("safe" if is_safe else "unknown")
+
                             send_alert(
                                 receiver_email,
                                 status=email_status,
@@ -313,11 +533,76 @@ def chatbot_interface():
                                 txn_hash=tx_hash,
                                 txn_timestamp=tx_time
                             )
+
                             st.success(f"✅ Alert sent successfully to {receiver_email}!")
+
                     except Exception as e:
                         st.warning(f"Could not send email alert: {e}")
 
-# ---------------- MAIN ----------------
+
+                    # =========================
+                    # SHAP Section (MOVE HERE)
+                    # =========================
+                    try:
+
+                        st.info(f"Available SHAP explainers: {list(shap_explainers.keys())}")
+
+                        if category in shap_explainers:
+
+                            st.subheader("🔹 SHAP Explainability")
+
+                            explainer = shap_explainers[category]
+
+                            # Extract features
+                            features_list, feature_names = extract_features(
+                                st.session_state.stored_inputs, category
+                            )
+
+                            input_df = pd.DataFrame([features_list], columns=feature_names)
+
+                            # Transform features
+                            preprocessor = list(models[category].named_steps.values())[0]
+                            X_input = preprocessor.transform(input_df)
+
+                            if hasattr(X_input, "toarray"):
+                                X_input = X_input.toarray()
+
+                            X_input = X_input.astype(float)
+
+                                # Local SHAP
+                            local_shap = explainer(X_input)
+
+                            local_shap_values = local_shap.values[0]
+
+                            if len(local_shap_values.shape) > 1:
+                                    local_shap_values = local_shap_values[:,1]
+
+                            df_local = pd.DataFrame({
+                                    "Feature": feature_names,
+                                    "SHAP Value": local_shap_values
+                                })
+
+                            df_local["Abs Value"] = df_local["SHAP Value"].abs()
+
+                            df_top = df_local.sort_values("Abs Value", ascending=False).head(5)
+
+                            st.text("Top 5 Features Influencing Prediction:")
+
+                            for _, row in df_top.iterrows():
+                                    effect = "Increase Fraud Risk" if row["SHAP Value"] > 0 else "Decrease Fraud Risk"
+                                    st.text(f"- {row['Feature']}: {effect} ({row['SHAP Value']:.3f})")
+
+                            import matplotlib.pyplot as plt
+
+                            fig, ax = plt.subplots(figsize=(10,6))
+                            ax.barh(df_top["Feature"], df_top["Abs Value"])
+                            ax.set_xlabel("SHAP Impact")
+                            ax.set_title(f"Top 5 SHAP Features for {category}")
+
+                            st.pyplot(fig)
+
+                    except Exception as e:
+                        st.warning(f"SHAP explanation failed: {e}")
 def main():
     if 'logged_in' not in st.session_state:
         st.session_state.logged_in = False
@@ -328,3 +613,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+ 

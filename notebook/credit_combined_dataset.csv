@@ -19,3 +19,43 @@
 18,TXN1018,XXXX-XXXX-XXXX-7715,Sherri Mclean,Fuel,4595.80,2025-05-16,18:17:56,ATM Withdrawal,Bangalore,POS Terminal,2,0,not fraud
 19,TXN1019,XXXX-XXXX-XXXX-1203,Kimberly Myers,Pharmacy,487.46,2025-06-28,22:09:34,ATM Withdrawal,Mumbai,Mobile App,1,0,not fraud
 20,TXN1020,XXXX-XXXX-XXXX-8894,Cynthia Lewis,Fuel,1510.60,2025-07-05,19:42:24,POS,Pune,POS Terminal,1,1,not fraud
+21,TXN1021,XXXX-XXXX-XXXX-5532,Kevin Butler,Electronics,3521.66,2025-07-03,10:15:21,Online,Delhi,Web,2,1,fraud
+22,TXN1022,XXXX-XXXX-XXXX-6610,Amanda Lee,Grocery,642.90,2025-06-18,09:21:13,POS,Pune,POS Terminal,0,0,not fraud
+23,TXN1023,XXXX-XXXX-XXXX-7432,Michael Stone,Travel,2899.10,2025-06-19,14:44:50,Online,Mumbai,Mobile App,2,1,fraud
+24,TXN1024,XXXX-XXXX-XXXX-9981,Sarah Watson,Pharmacy,420.77,2025-05-29,11:18:37,POS,Delhi,POS Terminal,0,0,not fraud
+25,TXN1025,XXXX-XXXX-XXXX-4402,Daniel Young,Fuel,2100.44,2025-06-30,07:33:19,ATM Withdrawal,Hyderabad,Mobile App,1,0,not fraud
+26,TXN1026,XXXX-XXXX-XXXX-3319,Olivia Brooks,Electronics,3899.22,2025-07-02,16:54:41,Online,Bangalore,Web,3,1,fraud
+27,TXN1027,XXXX-XXXX-XXXX-7811,Anthony Wood,Clothing,987.10,2025-05-26,12:03:10,POS,Mumbai,POS Terminal,0,0,not fraud
+28,TXN1028,XXXX-XXXX-XXXX-4421,Linda Scott,Grocery,1503.92,2025-06-22,18:42:12,Online,Pune,Mobile App,1,0,not fraud
+29,TXN1029,XXXX-XXXX-XXXX-6674,Christopher Hall,Travel,4999.90,2025-06-25,23:11:45,Online,Delhi,Web,3,1,fraud
+30,TXN1030,XXXX-XXXX-XXXX-2008,Jessica Green,Pharmacy,378.66,2025-05-21,15:32:01,POS,Bangalore,POS Terminal,0,0,not fraud
+31,TXN1031,XXXX-XXXX-XXXX-5712,Andrew Adams,Electronics,4321.75,2025-06-14,20:11:05,Online,Mumbai,Web,2,1,fraud
+32,TXN1032,XXXX-XXXX-XXXX-8843,Natalie Rivera,Grocery,760.12,2025-05-18,09:12:50,POS,Hyderabad,POS Terminal,0,0,not fraud
+33,TXN1033,XXXX-XXXX-XXXX-9931,Peter Coleman,Travel,3155.23,2025-06-01,22:44:11,Online,Delhi,Mobile App,2,1,fraud
+34,TXN1034,XXXX-XXXX-XXXX-2217,Grace Howard,Clothing,1205.90,2025-06-04,13:10:40,POS,Pune,POS Terminal,0,0,not fraud
+35,TXN1035,XXXX-XXXX-XXXX-1129,Victor Ramirez,Fuel,2301.15,2025-06-11,07:51:39,ATM Withdrawal,Bangalore,Mobile App,1,0,not fraud
+36,TXN1036,XXXX-XXXX-XXXX-7733,Isabella Foster,Electronics,4050.88,2025-07-04,18:20:10,Online,Mumbai,Web,2,1,fraud
+37,TXN1037,XXXX-XXXX-XXXX-6642,David Peterson,Grocery,840.55,2025-05-20,10:05:05,POS,Delhi,POS Terminal,0,0,not fraud
+38,TXN1038,XXXX-XXXX-XXXX-8840,Sophia Gray,Pharmacy,399.33,2025-05-23,08:22:11,POS,Hyderabad,Mobile App,0,0,not fraud
+39,TXN1039,XXXX-XXXX-XXXX-1121,James Cooper,Travel,4888.12,2025-06-24,23:05:29,Online,Bangalore,Web,3,1,fraud
+40,TXN1040,XXXX-XXXX-XXXX-3398,Mia Kelly,Clothing,1501.55,2025-05-28,14:55:14,POS,Mumbai,POS Terminal,0,0,not fraud
+41,TXN1041,XXXX-XXXX-XXXX-7720,Noah Bailey,Electronics,3789.65,2025-06-17,19:35:22,Online,Delhi,Mobile App,2,1,fraud
+42,TXN1042,XXXX-XXXX-XXXX-4401,Charlotte Perry,Grocery,510.22,2025-06-21,11:14:07,POS,Pune,POS Terminal,0,0,not fraud
+43,TXN1043,XXXX-XXXX-XXXX-3390,Liam Simmons,Travel,4699.40,2025-06-26,22:20:31,Online,Hyderabad,Web,3,1,fraud
+44,TXN1044,XXXX-XXXX-XXXX-5521,Amelia Patterson,Pharmacy,415.09,2025-05-19,09:45:19,POS,Delhi,Mobile App,0,0,not fraud
+45,TXN1045,XXXX-XXXX-XXXX-6100,Lucas Hughes,Fuel,2055.76,2025-06-28,06:50:00,ATM Withdrawal,Mumbai,Mobile App,1,0,not fraud
+46,TXN1046,XXXX-XXXX-XXXX-7712,Ella Flores,Electronics,4100.32,2025-07-05,17:12:56,Online,Bangalore,Web,3,1,fraud
+47,TXN1047,XXXX-XXXX-XXXX-8891,Henry Butler,Grocery,690.41,2025-05-24,12:25:49,POS,Pune,POS Terminal,0,0,not fraud
+48,TXN1048,XXXX-XXXX-XXXX-2231,Avery Bryant,Clothing,1300.80,2025-05-30,15:48:17,POS,Hyderabad,POS Terminal,0,0,not fraud
+49,TXN1049,XXXX-XXXX-XXXX-9011,Jack Alexander,Travel,4980.70,2025-06-10,21:30:44,Online,Delhi,Web,3,1,fraud
+50,TXN1050,XXXX-XXXX-XXXX-4488,Lily Russell,Electronics,3990.44,2025-06-13,18:10:33,Online,Mumbai,Mobile App,2,1,fraud
+51,TXN1051,XXXX-XXXX-XXXX-6732,Benjamin Griffin,Grocery,720.35,2025-05-31,08:17:29,POS,Bangalore,POS Terminal,0,0,not fraud
+52,TXN1052,XXXX-XXXX-XXXX-7743,Hannah Diaz,Pharmacy,455.78,2025-05-25,10:40:14,POS,Delhi,Mobile App,0,0,not fraud
+53,TXN1053,XXXX-XXXX-XXXX-5591,Ethan Hayes,Fuel,2190.64,2025-06-16,07:22:40,ATM Withdrawal,Pune,Mobile App,1,0,not fraud
+54,TXN1054,XXXX-XXXX-XXXX-7718,Abigail Myers,Electronics,4200.15,2025-07-02,19:55:51,Online,Hyderabad,Web,2,1,fraud
+55,TXN1055,XXXX-XXXX-XXXX-3381,Logan Ford,Grocery,680.22,2025-06-02,11:35:42,POS,Mumbai,POS Terminal,0,0,not fraud
+56,TXN1056,XXXX-XXXX-XXXX-4492,Emily Hamilton,Travel,4870.31,2025-06-07,23:05:19,Online,Delhi,Web,3,1,fraud
+57,TXN1057,XXXX-XXXX-XXXX-1188,Matthew Graham,Clothing,1400.40,2025-06-09,16:10:55,POS,Bangalore,POS Terminal,0,0,not fraud
+58,TXN1058,XXXX-XXXX-XXXX-9910,Victoria Sullivan,Fuel,2280.66,2025-06-23,06:45:10,ATM Withdrawal,Hyderabad,Mobile App,1,0,not fraud
+59,TXN1059,XXXX-XXXX-XXXX-8844,Daniel Wallace,Electronics,4122.99,2025-07-06,18:50:21,Online,Pune,Web,2,1,fraud
+60,TXN1060,XXXX-XXXX-XXXX-6671,Sofia West,Grocery,740.25,2025-06-05,09:55:18,POS,Delhi,POS Terminal,0,0,not fraud
