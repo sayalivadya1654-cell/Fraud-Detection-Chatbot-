@@ -123,10 +123,9 @@ dataset_paths = {
 }
 
 for category_name, model_pipeline in models.items():
-
-    if category_name == "credit":
-        continue
     try:
+        st.write(f"🔄 Processing SHAP for: {category_name}")   # ✅ ADD THIS
+
         df_train = pd.read_csv(dataset_paths[category_name])
         df_train.columns = df_train.columns.str.strip().str.lower()
 
@@ -146,58 +145,109 @@ for category_name, model_pipeline in models.items():
             feature_cols = ['amount','sender_len','receiver_len','date_numeric','time_numeric']
 
         elif category_name == "credit":
-           df_train['card_length'] = df_train['card_number'].fillna('').apply(len) if 'card_number' in df_train else 0
-           df_train['cvv'] = df_train['cvv'].fillna(0).astype(int) if 'cvv' in df_train else 0     
 
-           feature_cols = ['card_length','cvv']
+            # ✅ Ensure columns exist FIRST
+            if 'card_number' not in df_train.columns:
+                df_train['card_number'] = ''
+            if 'cvv' not in df_train.columns:
+                df_train['cvv'] = 0
+
+            # ✅ Clean basic fields
+            df_train['card_number'] = df_train['card_number'].fillna('').astype(str)
+            df_train['cvv'] = pd.to_numeric(df_train['cvv'], errors='coerce').fillna(0)
+
+            # ✅ IMPORTANT: create card_length (YOU MISSED THIS)
+            df_train['card_length'] = df_train['card_number'].apply(len)
+
+            # ✅ Safe defaults for other features
+            df_train['is_international'] = df_train.get('is_international', 0)
+            df_train['transaction_amount'] = df_train.get('transaction_amount', 0)
+            df_train['transaction_type'] = df_train.get('transaction_type', 0)
+            df_train['merchant_category'] = df_train.get('merchant_category', 0)
+            df_train['location'] = df_train.get('location', 0)
+            df_train['previous_fraud_count'] = df_train.get('previous_fraud_count', 0)
+            df_train['channel'] = df_train.get('channel', 0)
+
+            # ✅ Convert everything to numeric safely
+            for col in df_train.columns:
+                if col != 'card_number':
+                    df_train[col] = pd.to_numeric(df_train[col], errors='coerce').fillna(0)
+
+            feature_cols = [
+                "card_length",
+                "cvv",
+                "is_international",
+                "transaction_amount",
+                "transaction_type",
+                "merchant_category",
+                "location",
+                "previous_fraud_count",
+                "channel"
+            ]
+
+            print(f"✅ CREDIT SHAP FEATURES: {feature_cols}")
 
         elif category_name == "url":
 
-            df_train['url_length'] = df_train['url'].fillna('').apply(len)
-            df_train['dots_count'] = df_train['url'].fillna('').apply(lambda x: x.count('.'))
-            df_train['has_https'] = df_train['url'].fillna('').apply(lambda x: int('https' in x))
+            df_train = pd.read_csv(dataset_paths["url"])
 
-            df_train['is_shortened'] = 0
-            df_train['entropy_score'] = 0
+            # ✅ Force everything to string first (CRITICAL FIX)
+            df_train = df_train.astype(str)
+
+            # ✅ Clean weird values like "[5E-1]"
+            df_train = df_train.replace(r'[\[\]]', '', regex=True)
+
+            # ✅ Keep only URL column
+            df_train['url'] = df_train['url'].fillna("").astype(str)
+            # Remove brackets and convert everything numeric safely
+            df_train = df_train.replace(r'[\[\]]', '', regex=True)
+            df_train['url'] = df_train['url'].fillna("").astype(str)
+
+            # Feature Engineering
+            df_train['url_length'] = df_train['url'].apply(len)
+            df_train['dots_count'] = df_train['url'].apply(lambda x: x.count('.'))
+            df_train['has_https'] = df_train['url'].apply(lambda x: int('https' in x))
+            df_train['is_shortened'] = df_train['url'].apply(lambda x: int("bit.ly" in x or "tinyurl" in x))
+            df_train['entropy_score'] = df_train['url'].apply(lambda x: len(set(x))/len(x) if x else 0)
+
+            # Safe numeric defaults
             df_train['domain_age_months'] = 0
             df_train['blacklist_match'] = 0
             df_train['sender_known'] = 0
             df_train['source_channel'] = 0
             df_train['clicked'] = 0
 
+            # ✅ FINAL HARD CLEAN: convert all to numeric, fill NAs
             feature_cols = [
-                "url_length",
-                "dots_count",
-                "has_https",
-                "is_shortened",
-                "entropy_score",
-                "domain_age_months",
-                "blacklist_match",
-                "sender_known",
-                "source_channel",
-                "clicked"
+                "url_length", "dots_count", "has_https", "is_shortened", "entropy_score",
+                "domain_age_months", "blacklist_match", "sender_known", "source_channel", "clicked"
             ]
-        # Preprocessing
-        preprocessor = list(model_pipeline.named_steps.values())[0]
-        X_train = preprocessor.transform(df_train[feature_cols])
-
-        if hasattr(X_train, "toarray"):
-            X_train = X_train.toarray()
-
-        X_train = X_train.astype(float)
+            df_train[feature_cols] = df_train[feature_cols].apply(pd.to_numeric, errors='coerce').fillna(0)
+        # ✅ Direct numeric input for SHAP (NO PREPROCESSOR)
+        X_train = df_train[feature_cols].astype(float).values
 
         # Classifier
-        classifier = list(model_pipeline.named_steps.values())[-1]
+        classifier = model_pipeline.named_steps[list(model_pipeline.named_steps.keys())[-1]]
 
-        explainer = shap.Explainer(classifier, X_train)
+        try:
+            if category_name == "url":
+                explainer = shap.TreeExplainer(classifier)
+            else:
+                explainer = shap.TreeExplainer(classifier)
 
-        shap_explainers[category_name] = explainer
-        shap_values_dict[category_name] = explainer(X_train)
+            shap_explainers[category_name] = explainer
+            print(f"✅ SHAP computed for {category_name}")
 
-        print(f"✅ SHAP computed for {category_name}")
+        except Exception as e:
+            print(f"❌ SHAP failed for {category_name}: {e}")
 
+    # ✅ THIS WAS MISSING (VERY IMPORTANT)
     except Exception as e:
-        print(f"⚠ Failed to compute SHAP for {category_name}: {e}")
+        import traceback
+        traceback.print_exc()
+        st.error(f"❌ SHAP ERROR for {category_name}: {e}")
+        # ✅ ADD THIS HERE (outside loop)
+        print(f"🔥 FINAL SHAP KEYS: {list(shap_explainers.keys())}")
                                 
 def extract_features(inputs, category):
 
@@ -218,26 +268,53 @@ def extract_features(inputs, category):
         return features, feature_names
 
     elif category == "credit":
-        card_num = inputs.get("card_number", "")
-        cvv = inputs.get("cvv", "")
-        return [len(card_num), int(cvv) if cvv.isdigit() else 0], ["card_length","cvv"]
+        card_num = str(inputs.get("card_number", "")).strip()
+        cvv = str(inputs.get("cvv", "")).strip()
 
+        card_length = len(card_num)
+
+        try:
+                cvv_val = int(cvv)
+        except:
+                cvv_val = 0
+
+        return [
+                card_length,
+                cvv_val,
+                0,  # is_international
+                0,  # transaction_amount
+                0,  # transaction_type
+                0,  # merchant_category
+                0,  # location
+                0,  # previous_fraud_count
+                0   # channel
+                 ], [
+                "card_length",
+                "cvv",
+                "is_international",
+                "transaction_amount",
+                "transaction_type",
+                "merchant_category",
+                "location",
+                "previous_fraud_count",
+                "channel"
+            ]
     elif category == "url":
 
         url = inputs.get("url", "")
 
         features = [
-            len(url),
-            url.count("."),
-            int("https" in url),
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0
-        ]
+        len(url),
+        url.count("."),
+        int("https" in url),
+        int("bit.ly" in url or "tinyurl" in url),  # shortened
+        len(set(url)) / len(url) if url else 0,    # entropy approx
+        0,  # domain_age (unknown)
+        0,  # blacklist
+        0,  # sender_known
+        0,  # source_channel
+        0   # clicked
+    ]
 
         feature_names = [
             "url_length",
@@ -265,10 +342,9 @@ def chatbot_reply(user_query, inputs, category):
 
     if model:
         try:
-            features, _ = extract_features(inputs, category)
+            features, feature_names = extract_features(inputs, category)
 
-            # 🔥 IMPORTANT FIX: Create DataFrame with correct column names
-            feature_names = model.named_steps['preprocessor'].transformers_[0][2]
+            # ✅ Always use raw feature names (SAFE for all models)
             input_df = pd.DataFrame([features], columns=feature_names)
 
             # 🔹 Prediction
@@ -287,8 +363,8 @@ def chatbot_reply(user_query, inputs, category):
                 return "✅ Transaction Safe according to Machine Learning Model.", True, risk_score
 
         except Exception as e:
-            print(f"ML model error for {category}: {e}")
-            return "❓ ML Error Occurred.", None, 50.0
+            st.error(f"ML ERROR ({category}): {e}")
+            return "❌ ML Processing Failed.", None, 50.0
 
     # 🔹 Fallback logic (no model found)
     if category == "upi":
@@ -541,10 +617,9 @@ def chatbot_interface():
 
 
                     # =========================
-                    # SHAP Section (MOVE HERE)
+                    # SHAP Section (FINAL FIX)
                     # =========================
                     try:
-
                         st.info(f"Available SHAP explainers: {list(shap_explainers.keys())}")
 
                         if category in shap_explainers:
@@ -553,45 +628,77 @@ def chatbot_interface():
 
                             explainer = shap_explainers[category]
 
-                            # Extract features
+                            # ✅ Extract features
                             features_list, feature_names = extract_features(
                                 st.session_state.stored_inputs, category
                             )
 
                             input_df = pd.DataFrame([features_list], columns=feature_names)
 
-                            # Transform features
-                            preprocessor = list(models[category].named_steps.values())[0]
-                            X_input = preprocessor.transform(input_df)
+                            if category == "url":
+                                X_input = input_df.astype(float).values
+                            else:
+                                preprocessor = list(models[category].named_steps.values())[0]
+                                X_input = preprocessor.transform(input_df)
 
-                            if hasattr(X_input, "toarray"):
-                                X_input = X_input.toarray()
+                                if hasattr(X_input, "toarray"):
+                                    X_input = X_input.toarray()
 
-                            X_input = X_input.astype(float)
+                                X_input = X_input.astype(float)
 
-                                # Local SHAP
-                            local_shap = explainer(X_input)
+                            # ✅ Get SHAP output
+                            shap_output = explainer(X_input)
 
-                            local_shap_values = local_shap.values[0]
+                            # =========================
+                            # 🔥 UNIVERSAL SHAP FIX
+                            # =========================
 
-                            if len(local_shap_values.shape) > 1:
-                                    local_shap_values = local_shap_values[:,1]
+                            # Case 1: New SHAP format
+                            if hasattr(shap_output, "values"):
+                                shap_vals = shap_output.values
+                            else:
+                                shap_vals = shap_output
 
+                            shap_vals = np.array(shap_vals)
+
+                            # Case 2: If 3D (samples, features, classes)
+                            if shap_vals.ndim == 3:
+                                shap_vals = shap_vals[0, :, 1]   # class 1 (fraud)
+
+                            # Case 3: If 2D (samples, features)
+                            elif shap_vals.ndim == 2:
+                                shap_vals = shap_vals[0]
+
+                            # Case 4: Already 1D
+                            else:
+                                shap_vals = shap_vals.flatten()
+
+                            # ✅ Ensure same length
+                            min_len = min(len(feature_names), len(shap_vals))
+
+                            feature_names = feature_names[:min_len]
+                            shap_vals = shap_vals[:min_len]
+
+                            # =========================
+                            # 📊 Create DataFrame
+                            # =========================
                             df_local = pd.DataFrame({
-                                    "Feature": feature_names,
-                                    "SHAP Value": local_shap_values
-                                })
+                                "Feature": feature_names,
+                                "SHAP Value": shap_vals
+                            })
 
                             df_local["Abs Value"] = df_local["SHAP Value"].abs()
-
                             df_top = df_local.sort_values("Abs Value", ascending=False).head(5)
 
                             st.text("Top 5 Features Influencing Prediction:")
 
                             for _, row in df_top.iterrows():
-                                    effect = "Increase Fraud Risk" if row["SHAP Value"] > 0 else "Decrease Fraud Risk"
-                                    st.text(f"- {row['Feature']}: {effect} ({row['SHAP Value']:.3f})")
+                                effect = "Increase Fraud Risk" if row["SHAP Value"] > 0 else "Decrease Fraud Risk"
+                                st.text(f"- {row['Feature']}: {effect} ({row['SHAP Value']:.3f})")
 
+                            # =========================
+                            # 📊 Plot
+                            # =========================
                             import matplotlib.pyplot as plt
 
                             fig, ax = plt.subplots(figsize=(10,6))
@@ -602,7 +709,10 @@ def chatbot_interface():
                             st.pyplot(fig)
 
                     except Exception as e:
-                        st.warning(f"SHAP explanation failed: {e}")
+                        import traceback
+                        traceback.print_exc()
+                        st.error(f"SHAP ERROR: {e}")
+                
 def main():
     if 'logged_in' not in st.session_state:
         st.session_state.logged_in = False
@@ -613,4 +723,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+ 
  
